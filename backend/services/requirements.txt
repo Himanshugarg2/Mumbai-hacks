@@ -1,0 +1,6 @@
+firebase-admin
+google-cloud-firestore
+google-auth
+requests
+openai
+google-api-python-client
