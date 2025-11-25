@@ -3,7 +3,7 @@ import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Navbar from "../Components/Navbar";
 import Stats from "../DashboardComponents/Stats";
-import InvestmentComponent from "../DashboardComponents/Investments";
+import InvestmentComponent from "../DashboardComponents/Investment/legacycode";
 import LoanComponent from "../DashboardComponents/Loan";
 import DreamComponent from "../DashboardComponents/Dream";
 import { 
