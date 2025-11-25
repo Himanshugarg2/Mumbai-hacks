@@ -1,0 +1,27 @@
+# Node.js
+node_modules/
+.env
+
+# Build output
+frontend/dist/
+
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# Misc
+*.log
+
+# Coverage
+coverage/
+
+# Others
+backend/.env
