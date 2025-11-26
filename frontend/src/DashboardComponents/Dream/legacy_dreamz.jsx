@@ -13,7 +13,7 @@ import {
   Loader2
 } from "lucide-react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase"; // Ensure this matches your firebase config path
+import { db } from "../../firebase"; // Ensure this matches your firebase config path
 
 // --- Helpers ---
 const formatCurrency = (amount) => {

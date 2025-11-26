@@ -9,6 +9,7 @@ import Auth from "./Pages/Auth";
 import Dashboard from "./Pages/Dashboard";
 import AdminAddTransaction from "./Components/AdminComponent";
 import Onboarding from "./Pages/Onboarding";
+import PersonalizedDashboard from "./Pages/PersonalizedDashboard";
 
 export default function App() {
   const [user, setUser] = useState(undefined);
@@ -58,6 +59,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/adt" element={<AdminAddTransaction />} />
+        <Route path="/dashboard" element={<PersonalizedDashboard />} />
 
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

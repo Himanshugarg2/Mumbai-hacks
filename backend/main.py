@@ -5,14 +5,17 @@ from services.firestore_service import (
     get_dreams,
     update_dream,
     delete_dream,
+    get_summary,
 )
-from services.gemini_service import generate_advice  #  generate financial advice
+from services.gemini_service import generate_advice, generate_smart_spend_tip
+
 from fastapi import Query
 from services.mutual_funds import (
     get_filtered_funds,
     fetch_amfi_data,
 )  #  mutual funds data
-
+from agents.cashflow_agent import CashflowPredictionService
+from agents.opportunity_agent import OpportunityScoutService
 
 from services.fd_bond_service import (
     get_all_fds,  # fd bonds and small savings
@@ -25,7 +28,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,18 +38,6 @@ app.add_middleware(
 @app.get("/")
 def health():
     return {"status": "ok"}
-
-
-@app.post("/add-income")
-def add_income_route(payload: dict):
-    add_income(payload["userId"], payload)
-    return {"message": "income added  "}
-
-
-@app.post("/add-expense")
-def add_expense_route(payload: dict):
-    add_expense(payload["userId"], payload)
-    return {"message": "expense added  "}
 
 
 @app.post("/dreams")
@@ -77,11 +68,11 @@ def summary_route(userId: str):
     return get_summary(userId)
 
 
-@app.post("/generate-advice")
-def advice_route(payload: dict):
-    summary = get_summary(payload["userId"])
-    advice = generate_advice(summary)
-    return {"advice": advice}
+# @app.post("/generate-advice")
+# def advice_route(payload: dict):
+#     summary = get_summary(payload["userId"])
+#     advice = generate_advice(summary)
+#     return {"advice": advice}
 
 
 @app.get("/mutual-funds")
@@ -125,3 +116,29 @@ def loans(type: str | None = None, risk: str | None = None):
     if type or risk:
         return filter_loans(type=type, risk=risk)
     return get_all_loans()
+
+
+@app.get("/ai/smart-spend/{userId}")
+def smart_spend_route(userId: str):
+    summary = get_summary(userId)
+    tip = generate_smart_spend_tip(summary)
+    return {"tip": tip}
+
+
+@app.post("/generate-advice")
+def advice_route(payload: dict):
+    summary = get_summary(payload["userId"])
+    advice = generate_advice(summary)
+    return {"advice": advice}
+
+
+@app.get("/cashflow/predict/{userId}")
+def cashflow_predict(userId: str):
+    service = CashflowPredictionService(userId)
+    return service.predict()
+
+
+@app.get("/ai/opportunity/{userId}")
+def opportunity_scout(userId: str):
+    service = OpportunityScoutService(userId)
+    return service.predict()
