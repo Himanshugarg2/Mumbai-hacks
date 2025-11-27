@@ -7,9 +7,9 @@ import "./App.css";
 
 import Auth from "./Pages/Auth";
 import Dashboard from "./Pages/Dashboard";
-import AdminAddTransaction from "./Components/AdminComponent";
 import Onboarding from "./Pages/Onboarding";
-import PersonalizedDashboard from "./Pages/PersonalizedDashboard";
+import InvestmentDashboard from "./Pages/InvestmentDashboard";
+import Navbar from "./Components/Navbar";
 
 export default function App() {
   const [user, setUser] = useState(undefined);
@@ -23,12 +23,7 @@ export default function App() {
         try {
           const ref = doc(db, "users", currentUser.uid);
           const snap = await getDoc(ref);
-
-          if (snap.exists()) {
-            setOnboarded(snap.data().onboardingCompleted || false);
-          } else {
-            setOnboarded(false);
-          }
+          setOnboarded(snap.exists() ? snap.data().onboardingCompleted : false);
         } catch (error) {
           console.error("Error fetching onboarding status:", error);
           setOnboarded(false);
@@ -41,7 +36,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // still checking auth
+  // Still checking auth/onboard state...
   if (user === undefined || onboarded === null) {
     return (
       <div className="flex items-center justify-center h-screen text-lg font-semibold">
@@ -50,17 +45,21 @@ export default function App() {
     );
   }
 
+  // Not logged in → Show login page
   if (!user) return <Auth />;
 
+  // Logged in but not onboarded → Show onboarding
   if (!onboarded) return <Onboarding />;
 
+  // Logged in + onboarded → Show app with Navbar
   return (
     <Router>
+      {/* Navbar visible on all authenticated pages */}
+      <Navbar />
+
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/adt" element={<AdminAddTransaction />} />
-        <Route path="/dashboard" element={<PersonalizedDashboard />} />
-
+        <Route path="/investment" element={<InvestmentDashboard />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
