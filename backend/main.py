@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+
+# Firestore CRUD
 from services.firestore_service import (
     add_dream,
     get_dreams,
@@ -7,22 +9,32 @@ from services.firestore_service import (
     delete_dream,
     get_summary,
 )
-from services.gemini_service import generate_advice, generate_smart_spend_tip
 
-from fastapi import Query
-from services.mutual_funds import (
-    get_filtered_funds,
-    fetch_amfi_data,
-)  #  mutual funds data
-from agents.cashflow_agent import CashflowPredictionService
-from agents.opportunity_agent import OpportunityScoutService
+from services.gemini_service import generate_advice
 
+# Mutual funds
+from services.mutual_funds import get_filtered_funds, fetch_amfi_data
+
+# FD, Bonds, Savings
 from services.fd_bond_service import (
-    get_all_fds,  # fd bonds and small savings
+    get_all_fds,
     get_all_bonds,
     get_all_small_savings,
 )
 
+# Loans
+from services.loan_service import get_all_loans, filter_loans
+
+# Agents
+from agents.cashflow_agent import CashflowPredictionService
+from agents.opportunity_agent import OpportunityScoutService
+from agents.smart_spend_agent import SmartSpendGuardianService  # NEW
+
+from services.gemini_service import generate_advice
+
+# ----------------------------------------------------------------------------
+# FastAPI App
+# ----------------------------------------------------------------------------
 
 app = FastAPI()
 
@@ -34,16 +46,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ----------------------------------------------------------------------------
+# Health
+# ----------------------------------------------------------------------------
+
 
 @app.get("/")
 def health():
     return {"status": "ok"}
 
 
+# ----------------------------------------------------------------------------
+# Dreams CRUD
+# ----------------------------------------------------------------------------
+
+
 @app.post("/dreams")
 def create_dream(payload: dict):
     add_dream(payload["userId"], payload)
-    return {"message": "dream added  "}
+    return {"message": "dream added"}
 
 
 @app.get("/dreams/{userId}")
@@ -54,13 +75,18 @@ def list_dreams(userId: str):
 @app.put("/dreams/{userId}/{dreamId}")
 def modify_dream(userId: str, dreamId: str, payload: dict):
     update_dream(userId, dreamId, payload)
-    return {"message": "dream updated "}
+    return {"message": "dream updated"}
 
 
 @app.delete("/dreams/{userId}/{dreamId}")
 def remove_dream(userId: str, dreamId: str):
     delete_dream(userId, dreamId)
-    return {"message": "dream deleted  "}
+    return {"message": "dream deleted"}
+
+
+# ----------------------------------------------------------------------------
+# Summary (expenses + income aggregated)
+# ----------------------------------------------------------------------------
 
 
 @app.get("/summary/{userId}")
@@ -68,11 +94,9 @@ def summary_route(userId: str):
     return get_summary(userId)
 
 
-# @app.post("/generate-advice")
-# def advice_route(payload: dict):
-#     summary = get_summary(payload["userId"])
-#     advice = generate_advice(summary)
-#     return {"advice": advice}
+# ----------------------------------------------------------------------------
+# Mutual Funds
+# ----------------------------------------------------------------------------
 
 
 @app.get("/mutual-funds")
@@ -84,13 +108,22 @@ def mutual_funds(
     search: str | None = None,
 ):
     return get_filtered_funds(
-        page=page, limit=limit, risk=risk, category=category, search=search
+        page=page,
+        limit=limit,
+        risk=risk,
+        category=category,
+        search=search,
     )
 
 
 @app.get("/mutual-funds/all")
 def get_all_funds():
     return {"results": fetch_amfi_data()}
+
+
+# ----------------------------------------------------------------------------
+# FD, Bonds, Savings
+# ----------------------------------------------------------------------------
 
 
 @app.get("/fds")
@@ -108,7 +141,9 @@ def savings():
     return get_all_small_savings()
 
 
-from services.loan_service import get_all_loans, filter_loans
+# ----------------------------------------------------------------------------
+# Loans
+# ----------------------------------------------------------------------------
 
 
 @app.get("/loans")
@@ -118,11 +153,9 @@ def loans(type: str | None = None, risk: str | None = None):
     return get_all_loans()
 
 
-@app.get("/ai/smart-spend/{userId}")
-def smart_spend_route(userId: str):
-    summary = get_summary(userId)
-    tip = generate_smart_spend_tip(summary)
-    return {"tip": tip}
+# ----------------------------------------------------------------------------
+# Gemini Advice Generator
+# ----------------------------------------------------------------------------
 
 
 @app.post("/generate-advice")
@@ -132,13 +165,38 @@ def advice_route(payload: dict):
     return {"advice": advice}
 
 
+# ----------------------------------------------------------------------------
+# Cashflow Predictor (UPDATED)
+# ----------------------------------------------------------------------------
+
+
 @app.get("/cashflow/predict/{userId}")
 def cashflow_predict(userId: str):
     service = CashflowPredictionService(userId)
     return service.predict()
 
 
+# ----------------------------------------------------------------------------
+# Opportunity Scout (TomTom + lat/lon)
+# ----------------------------------------------------------------------------
+
+
 @app.get("/ai/opportunity/{userId}")
-def opportunity_scout(userId: str):
+def opportunity_scout(
+    userId: str,
+    lat: float | None = None,
+    lon: float | None = None,
+):
     service = OpportunityScoutService(userId)
+    return service.predict(lat=lat, lon=lon)
+
+
+# ----------------------------------------------------------------------------
+# SmartSpend Guardian Agent (NEW – Agent B)
+# ----------------------------------------------------------------------------
+
+
+@app.get("/ai/smart-guardian/{userId}")
+def smart_guardian(userId: str):
+    service = SmartSpendGuardianService(userId)
     return service.predict()

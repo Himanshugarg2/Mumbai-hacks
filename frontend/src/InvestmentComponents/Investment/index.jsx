@@ -3,10 +3,10 @@ import RiskBadge from "./components/RiskBadge";
 import InfoRow from "./components/InfoRow";
 import InvestmentCard from "./components/InvestmentCard";
 import MyInvestmentCard from "./components/MyInvestmentCard";
-import ConfirmationModal from "./components/ConfirmationModal";
+import { ConfirmationModal } from "./components/ConfirmationModal";
 import { formatCurrency } from "./helpers/formatters";
 
-import { auth, db } from "../firebase";
+import { auth, db } from "../../firebase";
 import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 
 import {

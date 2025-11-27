@@ -33,8 +33,6 @@ def call_gemini(prompt: str) -> str:
 
 
 # -----------------------------
-# 🟢 1. Financial Advice Generator (3 tips)
-# -----------------------------
 def generate_advice(summary: dict):
     prompt = f"""
 You are a financial advisor AI. The user gives their financial summary.
@@ -50,29 +48,6 @@ TASK:
 - Avoid generic statements.
 - Focus on real improvements based on the numbers.
 - Keep each tip to 1 sentence.
-"""
-
-    return call_gemini(prompt)
-
-
-# -----------------------------
-# 🟧 2. SmartSpend Guardian (1 daily spending warning)
-# -----------------------------
-def generate_smart_spend_tip(summary: dict) -> str:
-    prompt = f"""
-You are **SmartSpend Guardian**, an AI coach for Indian gig workers.
-Your job is to prevent overspending today.
-
-You receive summary data:
-{summary}
-
-TASK:
-- Give EXACTLY ONE helpful warning or money-saving tip.
-- Keep it friendly, real and specific (mention ₹ amounts if relevant).
-- Maximum 1–2 sentences.
-- Must sound proactive (e.g., "Avoid buying snacks over ₹100 today…").
-
-Return ONLY the tip text. 
 """
 
     return call_gemini(prompt)

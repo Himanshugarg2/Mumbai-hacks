@@ -1,34 +1,29 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
-export default function SmartSpendCard({ user }) {
-  const [tip, setTip] = useState(null);
+export default function SmartSpendGuardianCard({ user }) {
+  const [data, setData] = useState(null);
 
   useEffect(() => {
     if (!user) return;
-
-    const load = async () => {
-      try {
-        const res = await fetch(
-          `http://localhost:8000/ai/smart-spend/${user.uid}`
-        );
-        const data = await res.json();
-        setTip(data.tip || "Spending insights will appear here soon.");
-      } catch (err) {
-        console.error("SmartSpend error:", err);
-        setTip("Unable to fetch advice right now.");
-      }
-    };
-
-    load();
+    fetch(`http://localhost:8000/ai/smart-guardian/${user.uid}`)
+      .then(r => r.json())
+      .then(setData);
   }, [user]);
 
+  if (!data)
+    return <div className="p-4 bg-white rounded-xl shadow">Loading…</div>;
+
   return (
-    <div className="bg-white rounded-2xl shadow border border-gray-100 p-5 h-full">
-      <h2 className="text-lg font-semibold mb-3">
-        TODAY'S AI TIP — SmartSpend Guardian
-      </h2>
-      <p className="text-sm text-gray-700 leading-relaxed">
-        {tip || "Loading your personalized tip…"}
+    <div className="p-5 bg-white rounded-xl shadow border">
+      <h2 className="font-semibold text-lg">🔍 SmartSpend Guardian</h2>
+      <p className="text-sm mt-2">
+        Today's spend: <b>₹{data.todaySpent}</b>
+      </p>
+      <p className="text-sm">
+        Safe limit: <b>₹{data.safeDailyLimit}</b>
+      </p>
+      <p className="text-sm mt-2 text-blue-600">
+        {data.tip}
       </p>
     </div>
   );

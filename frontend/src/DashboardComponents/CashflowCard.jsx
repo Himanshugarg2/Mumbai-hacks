@@ -1,75 +1,37 @@
-import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 
-export default function CashflowCard({ user, profile }) {
-  const [prediction, setPrediction] = useState(null);
+export default function CashflowCard({ user }) {
+  const [data, setData] = useState(null);
 
   useEffect(() => {
     if (!user) return;
-
-    const loadPrediction = async () => {
-      const snap = await getDoc(
-        doc(db, "users", user.uid, "cashflow", "prediction")
-      );
-      if (snap.exists()) {
-        setPrediction(snap.data());
-      }
-    };
-
-    loadPrediction();
+    fetch(`http://localhost:8000/cashflow/predict/${user.uid}`)
+      .then((r) => r.json())
+      .then(setData)
+      .catch((err) => console.error("Cashflow API error:", err));
   }, [user]);
 
-  if (!prediction) {
-    return (
-      <div className="bg-white rounded-2xl shadow border border-gray-100 p-5 h-full">
-        <h2 className="text-lg font-semibold mb-3">
-          CASHFLOW AI — Future Income Predictor
-        </h2>
-        <p className="text-sm text-gray-500">
-          Generating your cashflow forecast…
-        </p>
-      </div>
-    );
+  if (!data || !data.next30DaysProjection) {
+    return <div className="p-4 bg-white rounded-xl shadow">Loading…</div>;
   }
 
+  const projection = data.next30DaysProjection;
+
   return (
-    <div className="bg-white rounded-2xl shadow border border-gray-100 p-5 h-full">
-      <h2 className="text-lg font-semibold mb-1">
-        CASHFLOW AI — Future Income Predictor
-      </h2>
-      <p className="text-xs text-gray-400 mb-3">
-        Uses your income, expenses & gig profile to predict future cashflow.
+    <div className="p-5 bg-white rounded-xl shadow border">
+      <h2 className="font-semibold text-lg">📈 Cashflow Predictor</h2>
+
+      <p className="text-sm mt-2">
+        Next income: <b>₹{projection.income}</b>
       </p>
 
-      <p className="text-3xl font-bold mb-1">
-        {prediction.cashflowScore}/100
-      </p>
-      <p className="text-sm text-gray-600 mb-3">
-        {prediction.alertMessage}
+      <p className="text-sm">
+        Next expenses: <b>₹{projection.expense}</b>
       </p>
 
-      <div className="text-sm space-y-1">
-        <p>
-          <span className="font-semibold">Gig Type:</span>{" "}
-          {profile?.gigType}
-        </p>
-        <p>
-          <span className="font-semibold">Last Month Income:</span>{" "}
-          ₹{profile?.monthlyIncome}
-        </p>
-        <p>
-          <span className="font-semibold">Predicted Next Month Income:</span>{" "}
-          ₹{prediction.next30DaysProjection.income}
-        </p>
-        <p>
-          <span className="font-semibold">Predicted Next Month Expense:</span>{" "}
-          ₹{prediction.next30DaysProjection.expense}
-        </p>
-        <p className="font-semibold text-red-600">
-          Shortage Forecast: ₹{prediction.shortageAmount}
-        </p>
-      </div>
+      {data.alertMessage && (
+        <p className="text-red-500 mt-2">{data.alertMessage}</p>
+      )}
     </div>
   );
 }

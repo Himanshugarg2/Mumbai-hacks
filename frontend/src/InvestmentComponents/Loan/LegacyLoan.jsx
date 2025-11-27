@@ -14,56 +14,12 @@ import {
   Loader2,
   Wallet
 } from "lucide-react";
-import { auth, db } from "../firebase";
+import { auth, db } from "../../firebase";
 import { 
   collection, 
   addDoc, 
   serverTimestamp
 } from "firebase/firestore";
-
-
-
-// --- MOCK DATA (Fallback) ---
-const MOCK_LOANS = [
-  {
-    type: "Personal Loan",
-    bank: "HDFC Bank",
-    interest_rate: "10.5% - 21%",
-    max_tenure: "6 years",
-    processing_fee: "Up to 2.5%",
-    eligibility: "Salary ≥ ₹25,000/month",
-    risk: "high",
-    use_case: "Emergency, medical, travel",
-  },
-  {
-    type: "Home Loan",
-    bank: "SBI",
-    interest_rate: "8.4% - 9.5%",
-    max_tenure: "30 years",
-    processing_fee: "0% (limited offers)",
-    eligibility: "CIBIL ≥ 650",
-    risk: "medium",
-    use_case: "Buying or constructing house",
-  },
-  {
-    type: "Car Loan",
-    bank: "ICICI Bank",
-    interest_rate: "8.75% - 12.5%",
-    max_tenure: "7 years",
-    processing_fee: "₹3,000 - ₹5,000",
-    risk: "medium",
-    use_case: "New or used car purchase",
-  },
-  {
-    type: "Gold Loan",
-    bank: "Axis Bank",
-    interest_rate: "7.9% - 17%",
-    max_tenure: "3 years",
-    processing_fee: "1% of loan amount",
-    risk: "low",
-    use_case: "Short-term loan against gold",
-  },
-];
 
 // ==================== LOAN CARD ====================
 export function LoanCard({ loan, onSelect }) {

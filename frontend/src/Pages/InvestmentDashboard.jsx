@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Stats from "../InvestmentComponents/Stats";
-import InvestmentComponent from "../InvestmentComponents/Investment/legacycode";
-import LoanComponent from "../InvestmentComponents/Loan";
+import InvestmentComponent from "../InvestmentComponents/Investment";
+import LoanComponent from "../InvestmentComponents/Loan/Index";
 import DreamComponent from "../InvestmentComponents/Dream";
 import { 
   LayoutDashboard, 

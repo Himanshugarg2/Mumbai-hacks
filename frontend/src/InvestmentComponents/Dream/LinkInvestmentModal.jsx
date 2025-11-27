@@ -1,4 +1,9 @@
 // ================= LINK INVESTMENT MODAL =================
+import { X } from "lucide-react";
+import { PiggyBank } from "lucide-react";
+import { formatCurrency } from "./helpers";
+
+
 export  default function LinkInvestmentModal({ dream, investments, onClose, onLink }) {
   if (!dream) return null;
 

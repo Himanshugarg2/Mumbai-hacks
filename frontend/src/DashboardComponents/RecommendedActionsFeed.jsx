@@ -1,0 +1,24 @@
+import React from "react";
+
+export default function RecommendedActionsFeed({ cashflow, smart, opportunity }) {
+  const items = [];
+
+  if (cashflow?.aiTips) items.push(...cashflow.aiTips.map(t => ({ source: "Cashflow", text: t })));
+  if (smart?.tip) items.push({ source: "SmartSpend", text: smart.tip });
+  if (opportunity?.aiAdvice) items.push({ source: "Opportunity", text: opportunity.aiAdvice });
+
+  return (
+    <div className="bg-white rounded-2xl shadow p-5 border">
+      <h3 className="font-semibold mb-3">Recommended Actions</h3>
+      <div className="space-y-2">
+        {items.length === 0 && <div className="text-sm text-gray-500">No recommendations yet.</div>}
+        {items.map((it, idx) => (
+          <div key={idx} className="p-2 border rounded bg-gray-50">
+            <div className="text-xs text-gray-500">{it.source}</div>
+            <div className="text-sm">{it.text}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
