@@ -96,9 +96,12 @@ export default function Dashboard() {
 
       {/* CHARTS & RECOMMENDATIONS */}
       <div className="grid md:grid-cols-3 gap-6">
-        <CashflowTrendGraph user={user} /> {/* loads itself */}
-        <SpendingPieChart user={user} /> {/* loads itself */}
-        <RecommendedActionsFeed user={user} /> {/* loads itself */}
+        <div style={{ minWidth: 0, minHeight: 260 }}>
+          <CashflowTrendGraph user={user} />
+        </div>
+        <div style={{ minWidth: 0, minHeight: 260 }}>
+          <SpendingPieChart user={user} />
+        </div>
       </div>
     </div>
   );

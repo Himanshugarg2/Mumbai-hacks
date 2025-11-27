@@ -1,11 +1,17 @@
 import React from "react";
 
-export default function RecommendedActionsFeed({ cashflow, smart, opportunity }) {
+export default function RecommendedActionsFeed({ aiTips = [], tip, aiAdvice }) {
   const items = [];
 
-  if (cashflow?.aiTips) items.push(...cashflow.aiTips.map(t => ({ source: "Cashflow", text: t })));
-  if (smart?.tip) items.push({ source: "SmartSpend", text: smart.tip });
-  if (opportunity?.aiAdvice) items.push({ source: "Opportunity", text: opportunity.aiAdvice });
+  if (Array.isArray(aiTips) && aiTips.length > 0) {
+    items.push(...aiTips.map(t => ({ source: "Cashflow", text: t })));
+  }
+  if (tip) {
+    items.push({ source: "SmartSpend", text: tip });
+  }
+  if (aiAdvice) {
+    items.push({ source: "Opportunity", text: aiAdvice });
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow p-5 border">

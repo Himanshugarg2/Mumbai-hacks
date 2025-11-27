@@ -33,8 +33,21 @@ export default function CashflowTrendGraph({ user }) {
         0
       );
 
+      // Format date for better X-axis labels
+      let formattedDate = d.date;
+      if (d.date) {
+        // Try to format YYYY-MM-DD to DD MMM or similar
+        const parts = d.date.split("-");
+        if (parts.length === 3) {
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          formattedDate = `${parseInt(parts[2], 10)} ${months[parseInt(parts[1], 10) - 1]}`;
+        }
+      } else {
+        // Use doc.id as fallback if date is missing
+        formattedDate = doc.id;
+      }
       arr.push({
-        date: d.date || "Unknown",
+        date: formattedDate,
         spent,
       });
     });
@@ -56,7 +69,7 @@ export default function CashflowTrendGraph({ user }) {
           <ResponsiveContainer>
             <LineChart data={series}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} interval={0} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
               <Line
