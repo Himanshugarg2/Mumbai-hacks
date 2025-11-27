@@ -30,7 +30,6 @@ from agents.cashflow_agent import CashflowPredictionService
 from agents.opportunity_agent import OpportunityScoutService
 from agents.smart_spend_agent import SmartSpendGuardianService  # NEW
 
-from services.gemini_service import generate_advice
 
 # ----------------------------------------------------------------------------
 # FastAPI App
