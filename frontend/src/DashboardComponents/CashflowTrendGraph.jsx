@@ -9,10 +9,8 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid,
-  Defs,
-  LinearGradient,
-  Stop
+  CartesianGrid
+  // Note: Defs, LinearGradient, Stop are REMOVED from imports
 } from "recharts";
 
 // Utility to format currency
@@ -92,8 +90,6 @@ export default function CashflowTrendGraph({ user }) {
       // Sort Chronologically (Oldest to Newest)
       arr.sort((a, b) => a.rawDate - b.rawDate);
 
-      // Limit to last 7 or 14 data points if list is huge, for cleaner UI? 
-      // For now, we show all.
       setSeries(arr);
       setTotalSpent(total);
     } catch (err) {
@@ -130,7 +126,6 @@ export default function CashflowTrendGraph({ user }) {
           <p className="text-sm text-gray-400 mt-1">Total expenses recorded</p>
         </div>
         
-        {/* Optional Filter Icon (Visual only) */}
         <div className="p-2 bg-gray-50 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors cursor-pointer">
           <Filter className="w-4 h-4" />
         </div>
@@ -146,6 +141,9 @@ export default function CashflowTrendGraph({ user }) {
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={series} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              {/* FIX: Use standard SVG elements (lowercase) 
+                  No import needed from Recharts 
+              */}
               <defs>
                 <linearGradient id="colorSpent" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
