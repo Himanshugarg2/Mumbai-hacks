@@ -1,0 +1,170 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+
+export default function DreamsSimple({ user }) {
+  const [dreams, setDreams] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    goal_amount: "",
+    saved_amount: "",
+    deadline: "",
+  });
+
+  const API = "http://localhost:8000/dreams";
+
+  // Load user's dreams
+  useEffect(() => {
+    if (!user) return;
+    loadDreams();
+  }, [user]);
+
+  const loadDreams = async () => {
+    const res = await axios.get(`${API}/${user.uid}`);
+    setDreams(res.data || []);
+  };
+
+  const saveDream = async () => {
+    if (!form.title || !form.goal_amount || !form.deadline) {
+      return alert("Please fill title, goal, and deadline.");
+    }
+
+    const payload = {
+      ...form,
+      saved_amount: form.saved_amount || "0",
+      userId: user.uid,
+    };
+
+    await axios.post(API, payload);
+
+    // Reset
+    setForm({
+      title: "",
+      goal_amount: "",
+      saved_amount: "",
+      deadline: "",
+    });
+    setShowModal(false);
+    loadDreams();
+  };
+
+  const deleteDream = async (id) => {
+    if (!window.confirm("Delete this dream?")) return;
+
+    await axios.delete(`${API}/${user.uid}/${id}`);
+    loadDreams();
+  };
+
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-md">
+
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Your Dreams</h2>
+
+        {/* + button */}
+        <button
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 text-white px-4 py-1 rounded-lg font-bold"
+        >
+          +
+        </button>
+      </div>
+
+      {/* Dream List */}
+      {dreams.length === 0 ? (
+        <p className="text-gray-500">No dreams added yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {dreams.map((d) => (
+            <div
+              key={d.id}
+              className="p-3 border rounded-lg flex justify-between"
+            >
+              <div>
+                <p className="font-semibold text-lg">{d.title}</p>
+                <p className="text-sm text-gray-600">
+                  Goal: ₹{d.goal_amount} | Saved: ₹{d.saved_amount}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Deadline: {d.deadline}
+                </p>
+              </div>
+
+              <button
+                onClick={() => deleteDream(d.id)}
+                className="text-red-500 font-bold"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ADD DREAM MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex justify-center items-center">
+          <div className="bg-white p-5 rounded-xl shadow-xl w-80">
+            <h3 className="text-lg font-semibold mb-3">Create New Dream</h3>
+
+            <input
+              type="text"
+              className="border p-2 rounded w-full mb-2"
+              placeholder="Dream Title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+
+            <input
+              type="number"
+              className="border p-2 rounded w-full mb-2"
+              placeholder="Goal Amount"
+              value={form.goal_amount}
+              onChange={(e) =>
+                setForm({ ...form, goal_amount: e.target.value })
+              }
+            />
+
+            <input
+              type="number"
+              className="border p-2 rounded w-full mb-2"
+              placeholder="Saved Amount"
+              value={form.saved_amount}
+              onChange={(e) =>
+                setForm({ ...form, saved_amount: e.target.value })
+              }
+            />
+
+            <input
+              type="date"
+              className="border p-2 rounded w-full mb-3"
+              value={form.deadline}
+              onChange={(e) =>
+                setForm({ ...form, deadline: e.target.value })
+              }
+            />
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-2">
+              <button
+                className="text-gray-600"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="bg-blue-600 text-white px-4 py-1 rounded"
+                onClick={saveDream}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

@@ -12,6 +12,7 @@ import CashflowTrendGraph from "../DashboardComponents/CashflowTrendGraph";
 import SpendingPieChart from "../DashboardComponents/SpendingPieChart";
 import RecommendedActionsFeed from "../DashboardComponents/RecommendedActionsFeed";
 import TodayLogCard from "../DashboardComponents/TodayLogCard";
+import DreamsCard from "../DashboardComponents/DreamsCard";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -70,10 +71,7 @@ export default function Dashboard() {
             {profile?.gigType || "Delivery Partner"}
           </div>
         </div>
-        <div className="flex gap-3">
-          <button className="bg-white border p-2 rounded">+ Add Expense</button>
-          <button className="bg-white border p-2 rounded">+ Add Income</button>
-        </div>
+   
       </div>
 
       {/* QUICK SNAPSHOT + OPPORTUNITY */}
@@ -102,6 +100,7 @@ export default function Dashboard() {
         <div style={{ minWidth: 0, minHeight: 260 }}>
           <SpendingPieChart user={user} />
         </div>
+        <DreamsCard user={user} />
       </div>
     </div>
   );
