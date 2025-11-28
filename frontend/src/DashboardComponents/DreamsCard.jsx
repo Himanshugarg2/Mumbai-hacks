@@ -118,6 +118,8 @@ export default function DreamsCard({ user }) {
             let planObj = aiPlan?.aiPlan;
 
             if (typeof planObj === "string") {
+              // Remove code block markers if present
+              planObj = planObj.replace(/```json|```/g, "").trim();
               try {
                 planObj = JSON.parse(planObj);
               } catch {
