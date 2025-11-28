@@ -97,7 +97,7 @@ def get_summary(user_id: str) -> dict:
 def get_user_transactions(user_id: str):
     """
     Fetch all daily transaction logs for the user.
-    Expected Firestore structure:
+    Expected structure:
     users/{userId}/transactions/{YYYY-MM-DD}
     """
     try:
@@ -107,6 +107,7 @@ def get_user_transactions(user_id: str):
         logs = []
         for doc in docs:
             data = doc.to_dict()
+            data["date"] = doc.id  # 🔥 THIS IS THE FIX
             logs.append(data)
 
         return logs

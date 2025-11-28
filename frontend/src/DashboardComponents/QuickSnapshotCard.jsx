@@ -7,6 +7,7 @@ export default function QuickSnapshotCard({ profile, user }) {
     income: 0,
     expenses: 0,
     balance: 0,
+    daysLogged: 0,
   });
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function QuickSnapshotCard({ profile, user }) {
     const load = async () => {
       const userId = user.uid;
       const now = new Date();
-      const currentMonth = now.getMonth();   // 0–11
+      const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
 
       const transRef = collection(db, "users", userId, "transactions");
@@ -23,21 +24,21 @@ export default function QuickSnapshotCard({ profile, user }) {
 
       let totalIncome = 0;
       let totalExpenses = 0;
+      let daysLogged = 0;
 
       docsSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        const dateKey = docSnap.id; // "YYYY-MM-DD"
+        const dateKey = docSnap.id; // YYYY-MM-DD
 
-        // FIXED: Parse date safely (no timezone issues)
         const [year, month, day] = dateKey.split("-").map(Number);
         const d = new Date(year, month - 1, day);
 
         if (isNaN(d)) return;
 
-        // Only include this month's data
         if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
-          const income = Number(data.income) || 0;
+          daysLogged++;
 
+          const income = Number(data.income) || 0;
           const expenses = Object.values(data.expenses || {}).reduce(
             (sum, val) => sum + (Number(val) || 0),
             0
@@ -52,6 +53,7 @@ export default function QuickSnapshotCard({ profile, user }) {
         income: totalIncome,
         expenses: totalExpenses,
         balance: totalIncome - totalExpenses,
+        daysLogged,
       });
     };
 
@@ -70,6 +72,7 @@ export default function QuickSnapshotCard({ profile, user }) {
       <h3 className="text-sm font-bold text-gray-600 mb-2">
         Onboarding Estimates
       </h3>
+
       <div className="grid grid-cols-2 gap-4 text-sm mb-4">
         <div>
           <p className="text-gray-500">Monthly Income (Estimated)</p>
@@ -95,7 +98,12 @@ export default function QuickSnapshotCard({ profile, user }) {
       <h3 className="text-sm font-bold text-gray-600 mb-2">
         Current (This Month)
       </h3>
+
       <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <p className="text-gray-500">Days Logged</p>
+          <p className="text-xl font-bold">{live.daysLogged}</p>
+        </div>
         <div>
           <p className="text-gray-500">Actual Income</p>
           <p className="text-xl font-bold">₹{live.income}</p>
@@ -107,18 +115,6 @@ export default function QuickSnapshotCard({ profile, user }) {
         <div>
           <p className="text-gray-500">Current Balance</p>
           <p className="text-xl font-bold">₹{live.balance}</p>
-        </div>
-        <div>
-          <p className="text-gray-500">Difference vs Estimate</p>
-          <p
-            className={`text-xl font-bold ${
-              live.balance - onboardingSavings >= 0
-                ? "text-green-600"
-                : "text-red-600"
-            }`}
-          >
-            ₹{live.balance - onboardingSavings}
-          </p>
         </div>
       </div>
     </div>

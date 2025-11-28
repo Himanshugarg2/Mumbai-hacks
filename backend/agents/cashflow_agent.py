@@ -1,15 +1,12 @@
 import numpy as np
 from datetime import datetime
+from services.firestore_service import get_user_transactions
+from services.gemini_service import call_gemini
 import firebase_admin
 from firebase_admin import credentials, firestore
-from services.gemini_service import call_gemini
 
-
-# -----------------------------
-# Firebase Init
-# -----------------------------
+# Firebase init
 cred = credentials.Certificate("firebase-key.json")
-
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
@@ -21,121 +18,112 @@ class CashflowPredictionService:
         self.user_id = user_id
         self.user_ref = db.collection("users").document(user_id)
 
-    # -------------------------------------------------
-    # Fetch user profile + transactions (if needed)
-    # -------------------------------------------------
     def get_user_profile(self):
-        data = self.user_ref.get().to_dict()
-        return data or {}
+        return self.user_ref.get().to_dict() or {}
 
-    def get_recent_transactions(self):
-        logs = self.user_ref.collection("transactions").stream()
-        result = []
-
-        for d in logs:
-            obj = d.to_dict()
-            obj["date"] = d.id
-            result.append(obj)
-
-        return result
-
-    # -------------------------------------------------
-    # Simple Linear Regression (numpy)
-    # -------------------------------------------------
-    def simple_linear_predict(self, values):
-        if len(values) < 2:
-            return values[-1] if values else 0
-
-        X = np.arange(len(values))
-        Y = np.array(values)
-
-        slope = np.cov(X, Y, bias=True)[0][1] / np.var(X)
-        intercept = Y.mean() - slope * X.mean()
-
-        return slope * len(values) + intercept
-
-    # -------------------------------------------------
-    # Main Prediction Logic
-    # -------------------------------------------------
     def predict(self):
         profile = self.get_user_profile()
 
-        base_income = float(profile.get("monthlyIncome", 0))
-        base_expense = float(profile.get("monthlyExpense", 0))
+        base_income = float(profile.get("monthlyIncome", 0))  # onboarding income
+        base_expense = float(profile.get("monthlyExpense", 0))  # onboarding expense
 
-        # ----------------------------------
-        # Build pseudo-historical data (6 mo)
-        # ----------------------------------
-        past_income = np.array(
-            [base_income * np.random.uniform(0.6, 1.25) for _ in range(6)]
-        )
+        logs = get_user_transactions(self.user_id)
 
-        past_expense = np.array(
-            [base_expense * np.random.uniform(0.85, 1.15) for _ in range(6)]
-        )
+        now = datetime.now()
+        cm = now.month
+        cy = now.year
 
-        # Regression-based prediction
-        next_income = self.simple_linear_predict(past_income)
-        next_expense = self.simple_linear_predict(past_expense)
+        daily_incomes = []
+        daily_expenses = []
+        days_logged = 0
 
-        shortage = next_expense - next_income
+        # ---------- READ REAL FIRESTORE DATE (doc.id) ----------
+        for log in logs:
+            date_str = log.get("__id__") or log.get("date")
+            if not date_str:
+                continue
 
-        # ----------------------------------
-        # Cashflow Stability Score (0–100)
-        # ----------------------------------
-        if shortage <= 0:
-            score = 75 + np.random.randint(10)
+            try:
+                dt = datetime.strptime(date_str, "%Y-%m-%d")
+            except:
+                continue
+
+            # ---------- include ONLY current month's logs ----------
+            if dt.year == cy and dt.month == cm:
+                days_logged += 1
+
+                income = float(log.get("income", 0))
+                total_exp = sum(float(v or 0) for v in log.get("expenses", {}).values())
+
+                daily_incomes.append(income)
+                daily_expenses.append(total_exp)
+
+        # ---------- If no logs this month → fallback to onboarding ----------
+        if days_logged == 0:
+            final_income = base_income
+            final_expense = base_expense
+
         else:
-            percent_gap = (shortage / max(next_income, 1)) * 100
-            score = max(5, 70 - percent_gap)
+            # ---------- project from actual logs ----------
+            avg_daily_income = np.mean(daily_incomes)
+            avg_daily_expense = np.mean(daily_expenses)
 
-        # ----------------------------------
-        # Gemini – Generate 3 personalized tips
-        # ----------------------------------
+            projected_income_actual = avg_daily_income * 30
+            projected_expense_actual = avg_daily_expense * 30
+
+            # ---------- NO mixing onboarding into projection ----------
+            final_income = projected_income_actual
+            final_expense = projected_expense_actual
+
+        shortage = final_expense - final_income
+
+        # ---------- Cashflow Score ----------
+        if shortage <= 0:
+            score = 85
+        else:
+            percent_gap = (shortage / max(final_income, 1)) * 100
+            score = max(5, 75 - percent_gap)
+
+        # ---------- Gemini AI Tips ----------
         prompt = f"""
-You are a financial planning AI for Indian gig workers.
+You are a financial coach for gig workers in India.
 
-Given this data:
-- Next month expected income: ₹{int(next_income)}
-- Next month expected expense: ₹{int(next_expense)}
-- Expected shortage: ₹{int(shortage)} (negative means safe)
-- Base monthly income: ₹{base_income}
-- Base monthly expense: ₹{base_expense}
+User data:
+- Onboarding expected income: ₹{base_income}
+- Onboarding expected expense: ₹{base_expense}
+- Avg daily income this month: ₹{np.mean(daily_incomes) if days_logged else 0:.0f}
+- Avg daily expense this month: ₹{np.mean(daily_expenses) if days_logged else 0:.0f}
+- Projected monthly income based on actual logs: ₹{final_income:.0f}
+- Projected monthly expenses based on actual logs: ₹{final_expense:.0f}
+- Expected shortage (if any): ₹{shortage:.0f}
 
 TASK:
-Generate EXACTLY 3 short, highly personalized and practical financial tips.
-Each tip must be a single sentence.
-Focus on:
-- reducing spend
-- boosting income
-- managing cashflow risk
-- planning ahead
-
-Return tips in plain text separated by newline. No bullets or numbering.
+Give EXACTLY 3 short, sharp, actionable financial tips.
+Each tip must be ONE sentence. No bullets.
 """
 
         ai_text = call_gemini(prompt)
+        tips = [t.strip() for t in ai_text.split("\n") if t.strip()][:3]
 
-        # ensure list format
-        tips = [t.strip() for t in ai_text.split("\n") if t.strip()]
-        if len(tips) > 3:
-            tips = tips[:3]
-
-        # ----------------------------------
-        # Final Response
-        # ----------------------------------
         result = {
             "cashflowScore": int(score),
             "shortageAmount": int(shortage) if shortage > 0 else 0,
             "next30DaysProjection": {
-                "income": int(next_income),
-                "expense": int(next_expense),
+                "income": int(final_income),
+                "expense": int(final_expense),
             },
             "aiTips": tips,
+            "dailyStats": {
+                "daysLogged": days_logged,
+                "avgDailyIncome": (
+                    round(np.mean(daily_incomes), 2) if days_logged else 0
+                ),
+                "avgDailyExpense": (
+                    round(np.mean(daily_expenses), 2) if days_logged else 0
+                ),
+            },
             "updatedAt": datetime.utcnow().isoformat(),
         }
 
-        # Store in Firestore
         self.user_ref.collection("cashflow").document("prediction").set(result)
-
         return result
