@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function DreamsSimple({ user }) {
+export default function DreamsCard({ user }) {
   const [dreams, setDreams] = useState([]);
+  const [aiPlan, setAiPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
   const [form, setForm] = useState({
     title: "",
     goal_amount: "",
@@ -11,22 +13,43 @@ export default function DreamsSimple({ user }) {
     deadline: "",
   });
 
-  const API = "http://localhost:8000/dreams";
+  const API = "http://localhost:8000";
 
-  // Load user's dreams
+  // ----------------------------
+  // Load Dreams + AI Plan (cached)
+  // ----------------------------
   useEffect(() => {
     if (!user) return;
     loadDreams();
+    loadAIPlan();
   }, [user]);
 
+  // LOAD DREAMS FROM BACKEND
   const loadDreams = async () => {
-    const res = await axios.get(`${API}/${user.uid}`);
-    setDreams(res.data || []);
+    try {
+      const res = await axios.get(`${API}/dreams/${user.uid}`);
+      setDreams(res.data || []);
+    } catch (err) {
+      console.error("Failed to load dreams", err);
+    }
   };
 
+  // LOAD AI PLAN (reads cache; Gemini not called again)
+  const loadAIPlan = async () => {
+    try {
+      const res = await axios.get(`${API}/dreams/plan/${user.uid}`);
+      setAiPlan(res.data || null);
+    } catch (err) {
+      console.log("AI Plan load failed", err);
+    }
+  };
+
+  // ----------------------------
+  // Save a new dream
+  // ----------------------------
   const saveDream = async () => {
     if (!form.title || !form.goal_amount || !form.deadline) {
-      return alert("Please fill title, goal, and deadline.");
+      return alert("Please fill title, goal amount and deadline.");
     }
 
     const payload = {
@@ -35,24 +58,40 @@ export default function DreamsSimple({ user }) {
       userId: user.uid,
     };
 
-    await axios.post(API, payload);
+    await axios.post(`${API}/dreams`, payload);
 
-    // Reset
+    // Reset fields
     setForm({
       title: "",
       goal_amount: "",
       saved_amount: "",
       deadline: "",
     });
+
     setShowModal(false);
-    loadDreams();
+
+    await loadDreams();
+
+    // ❗ IMPORTANT: Clear AI cache after adding dream
+    await axios.delete(`${API}/dreams/plan/${user.uid}/cache`).catch(() => {});
+
+    await loadAIPlan(); // Reload updated plan
   };
 
+  // ----------------------------
+  // Delete dream
+  // ----------------------------
   const deleteDream = async (id) => {
     if (!window.confirm("Delete this dream?")) return;
 
-    await axios.delete(`${API}/${user.uid}/${id}`);
-    loadDreams();
+    await axios.delete(`${API}/dreams/${user.uid}/${id}`);
+
+    await loadDreams();
+
+    // ❗ Clear AI cache after deleting dream
+    await axios.delete(`${API}/dreams/plan/${user.uid}/cache`).catch(() => {});
+
+    await loadAIPlan();
   };
 
   return (
@@ -61,8 +100,6 @@ export default function DreamsSimple({ user }) {
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Your Dreams</h2>
-
-        {/* + button */}
         <button
           onClick={() => setShowModal(true)}
           className="bg-blue-600 text-white px-4 py-1 rounded-lg font-bold"
@@ -76,33 +113,61 @@ export default function DreamsSimple({ user }) {
         <p className="text-gray-500">No dreams added yet.</p>
       ) : (
         <div className="space-y-3">
-          {dreams.map((d) => (
-            <div
-              key={d.id}
-              className="p-3 border rounded-lg flex justify-between"
-            >
-              <div>
-                <p className="font-semibold text-lg">{d.title}</p>
-                <p className="text-sm text-gray-600">
-                  Goal: ₹{d.goal_amount} | Saved: ₹{d.saved_amount}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Deadline: {d.deadline}
-                </p>
-              </div>
+          {dreams.map((d) => {
+            // Extract AI plan properly
+            let planObj = aiPlan?.aiPlan;
 
-              <button
-                onClick={() => deleteDream(d.id)}
-                className="text-red-500 font-bold"
+            if (typeof planObj === "string") {
+              try {
+                planObj = JSON.parse(planObj);
+              } catch {
+                planObj = null;
+              }
+            }
+
+            const dreamPlan = planObj?.[d.title];
+
+            return (
+              <div
+                key={d.id}
+                className="p-3 border rounded-lg flex justify-between"
               >
-                Delete
-              </button>
-            </div>
-          ))}
+                <div>
+                  <p className="font-semibold text-lg">{d.title}</p>
+                  <p className="text-sm text-gray-600">
+                    Goal: ₹{d.goal_amount} | Saved: ₹{d.saved_amount}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Deadline: {d.deadline}
+                  </p>
+
+                  {/* AI Plan */}
+                  {dreamPlan && (
+                    <div className="mt-2 bg-blue-50 p-2 rounded text-sm">
+                      <p className="font-semibold text-blue-800">AI Plan:</p>
+                      <div className="text-gray-700 text-xs mt-1 space-y-1">
+                        <p>📅 <b>Monthly:</b> {dreamPlan.monthly_plan}</p>
+                        <p>🗓️ <b>Daily:</b> {dreamPlan.daily_plan}</p>
+                        <p>⚙️ <b>Adjust:</b> {dreamPlan.adjustments}</p>
+                        <p>⭐ <b>Motivation:</b> {dreamPlan.motivation}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => deleteDream(d.id)}
+                  className="text-red-500 font-bold"
+                >
+                  Delete
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ADD DREAM MODAL */}
+      {/* CREATE DREAM MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex justify-center items-center">
           <div className="bg-white p-5 rounded-xl shadow-xl w-80">
@@ -145,7 +210,6 @@ export default function DreamsSimple({ user }) {
               }
             />
 
-            {/* Buttons */}
             <div className="flex justify-end gap-2">
               <button
                 className="text-gray-600"

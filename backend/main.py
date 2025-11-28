@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from firebase_admin import firestore
 
 # Firestore CRUD
 from services.firestore_service import (
@@ -28,9 +29,11 @@ from services.loan_service import get_all_loans, filter_loans
 # Agents
 from agents.cashflow_agent import CashflowPredictionService
 from agents.opportunity_agent import OpportunityScoutService
-from agents.smart_spend_agent import SmartSpendGuardianService  # NEW
+from agents.smart_spend_agent import SmartSpendGuardianService
+from agents.dreams_agent import DreamPlannerService
 
 
+db = firestore.client()
 # ----------------------------------------------------------------------------
 # FastAPI App
 # ----------------------------------------------------------------------------
@@ -63,6 +66,12 @@ def health():
 @app.post("/dreams")
 def create_dream(payload: dict):
     add_dream(payload["userId"], payload)
+
+    # CLEAR CACHE
+    db.collection("users").document(payload["userId"]).collection("dream_ai").document(
+        "plan"
+    ).delete()
+
     return {"message": "dream added"}
 
 
@@ -74,12 +83,24 @@ def list_dreams(userId: str):
 @app.put("/dreams/{userId}/{dreamId}")
 def modify_dream(userId: str, dreamId: str, payload: dict):
     update_dream(userId, dreamId, payload)
+
+    # CLEAR CACHE
+    db.collection("users").document(userId).collection("dream_ai").document(
+        "plan"
+    ).delete()
+
     return {"message": "dream updated"}
 
 
 @app.delete("/dreams/{userId}/{dreamId}")
 def remove_dream(userId: str, dreamId: str):
     delete_dream(userId, dreamId)
+
+    # CLEAR CACHE
+    db.collection("users").document(userId).collection("dream_ai").document(
+        "plan"
+    ).delete()
+
     return {"message": "dream deleted"}
 
 
@@ -198,4 +219,13 @@ def opportunity_scout(
 @app.get("/ai/smart-guardian/{userId}")
 def smart_guardian(userId: str):
     service = SmartSpendGuardianService(userId)
+    return service.predict()
+
+
+# ----------------------------------------------------------------------------
+# Dreams Agent (NEW – Agent C)
+# ----------------------------------------------------------------------------
+@app.get("/dreams/plan/{userId}")
+def dream_plan(userId: str):
+    service = DreamPlannerService(userId)
     return service.predict()
