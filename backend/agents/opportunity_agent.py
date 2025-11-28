@@ -8,6 +8,7 @@ import concurrent.futures
 from functools import lru_cache
 from datetime import datetime
 
+
 # Import your existing services
 from services.firestore_service import get_user_transactions
 from services.gemini_service import call_gemini
