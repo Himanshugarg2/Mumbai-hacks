@@ -2,25 +2,25 @@ import React, { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-import { db } from "../firebase";
+import { db } from "../firebase"; 
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { 
   Calendar as CalendarIcon, 
   Edit3, 
   Save, 
-  X, 
   Briefcase, 
   Clock, 
   Banknote, 
   Fuel, 
   Coffee, 
   Tag, 
-  ChevronLeft, 
-  ChevronRight,
   Receipt
 } from "lucide-react";
 
-// Utility for currency
+// --------------------------
+// 1. UTILITY FUNCTIONS
+// --------------------------
+
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -29,13 +29,38 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
+// --------------------------
+// 2. INPUT COMPONENT (Must be outside TodayLogCard)
+// --------------------------
+
+const InputGroup = ({ label, icon: Icon, value, onChange, type = "text", placeholder, inputMode }) => (
+  <div className="mb-3">
+    <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">{label}</label>
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Icon className="h-4 w-4 text-gray-400" />
+      </div>
+      <input
+        type={type}
+        inputMode={inputMode} // Added for better mobile keyboard support
+        value={value === undefined || value === null ? "" : value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-gray-800"
+      />
+    </div>
+  </div>
+);
+
+// --------------------------
+// 3. MAIN COMPONENT
+// --------------------------
+
 export default function TodayLogCard({ user }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [log, setLog] = useState(null);
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Toggle for the calendar popup
   const [showCalendar, setShowCalendar] = useState(false);
 
   const dateKey = selectedDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
@@ -54,9 +79,7 @@ export default function TodayLogCard({ user }) {
 
   const [form, setForm] = useState(emptyLog);
 
-  // --------------------------
-  // LOAD LOG
-  // --------------------------
+  // Load Data
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -68,9 +91,8 @@ export default function TodayLogCard({ user }) {
         );
 
         if (snap.exists()) {
-          const data = snap.data();
-          setLog(data);
-          setForm({ ...emptyLog, ...data });
+          setLog(snap.data());
+          setForm({ ...emptyLog, ...snap.data() });
         } else {
           setLog(null);
           setForm(emptyLog);
@@ -85,30 +107,34 @@ export default function TodayLogCard({ user }) {
     load();
   }, [user, dateKey]);
 
-  // --------------------------
-  // SAVE LOG
-  // --------------------------
+  // Save Data
   const saveLog = async () => {
     setLoading(true);
-    // Convert all inputs to numbers before saving
+    // Convert inputs to numbers only when saving
     const cleaned = {
       ...form,
-      income: Number(form.income) || 0,
-      hoursWorked: Number(form.hoursWorked) || 0,
+      income: form.income === "" ? 0 : Number(form.income),
+      hoursWorked: form.hoursWorked === "" ? 0 : Number(form.hoursWorked),
       expenses: {
-        fuel: Number(form.expenses.fuel) || 0,
-        food: Number(form.expenses.food) || 0,
-        misc: Number(form.expenses.misc) || 0,
+        fuel: form.expenses.fuel === "" ? 0 : Number(form.expenses.fuel),
+        food: form.expenses.food === "" ? 0 : Number(form.expenses.food),
+        misc: form.expenses.misc === "" ? 0 : Number(form.expenses.misc),
       }
     };
-    await setDoc(
-      doc(db, "users", user.uid, "transactions", dateKey),
-      cleaned,
-      { merge: true }
-    );
-    setLog(cleaned);
-    setEditing(false);
-    setLoading(false);
+    
+    try {
+      await setDoc(
+        doc(db, "users", user.uid, "transactions", dateKey),
+        cleaned,
+        { merge: true }
+      );
+      setLog(cleaned);
+      setEditing(false);
+    } catch (error) {
+      console.error("Error saving:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Helper Calculations
@@ -121,29 +147,10 @@ export default function TodayLogCard({ user }) {
   const currentTotalExpenses = calculateTotalExpenses(form.expenses);
   const netProfit = (Number(form.income) || 0) - currentTotalExpenses;
 
-  // Custom Input Component for cleaner code
-  const InputGroup = ({ label, icon: Icon, value, onChange, type = "text", placeholder }) => (
-    <div className="mb-3">
-      <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">{label}</label>
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icon className="h-4 w-4 text-gray-400" />
-        </div>
-        <input
-          type={type}
-          value={value === undefined || value === null ? "" : String(value)}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-gray-800"
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col h-full relative">
       
-      {/* Header / Date Selector */}
+      {/* --- HEADER --- */}
       <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white z-20 relative">
         <div className="flex items-center gap-2">
            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
@@ -181,7 +188,7 @@ export default function TodayLogCard({ user }) {
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* --- CONTENT AREA --- */}
       <div className="p-5 flex-1 overflow-y-auto custom-scrollbar bg-white">
         
         {loading ? (
@@ -189,6 +196,7 @@ export default function TodayLogCard({ user }) {
             <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
           </div>
         ) : !editing ? (
+          
           /* VIEW MODE */
           <>
             {log ? (
@@ -208,14 +216,14 @@ export default function TodayLogCard({ user }) {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
-                     <div>
-                       <p className="text-emerald-400 text-xs font-bold uppercase mb-1">Income</p>
-                       <p className="font-semibold">{formatCurrency(log.income)}</p>
-                     </div>
-                     <div className="text-right">
-                       <p className="text-rose-400 text-xs font-bold uppercase mb-1">Expenses</p>
-                       <p className="font-semibold">{formatCurrency(calculateTotalExpenses(log.expenses))}</p>
-                     </div>
+                      <div>
+                        <p className="text-emerald-400 text-xs font-bold uppercase mb-1">Income</p>
+                        <p className="font-semibold">{formatCurrency(log.income)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-rose-400 text-xs font-bold uppercase mb-1">Expenses</p>
+                        <p className="font-semibold">{formatCurrency(calculateTotalExpenses(log.expenses))}</p>
+                      </div>
                   </div>
                 </div>
 
@@ -275,38 +283,51 @@ export default function TodayLogCard({ user }) {
             )}
           </>
         ) : (
+          
           /* EDIT MODE */
           <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-300">
             
-            {/* Main Income Inputs */}
+            {/* Main Inputs */}
             <div className="space-y-1">
+              {/* INCOME INPUT */}
               <InputGroup 
                 label="Total Income" 
                 icon={Banknote} 
-                type="number" 
-                value={form.income === null || form.income === undefined ? "" : form.income}
+                type="text"
+                inputMode="numeric"
+                value={form.income}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setForm({
-                    ...form,
-                    income: val === "" ? "" : (/^\d+$/.test(val) ? Number(val) : form.income)
-                  });
+                  // Allow empty or numbers only
+                  if (val === "" || /^\d+$/.test(val)) {
+                    setForm({ ...form, income: val });
+                  }
                 }}
                 placeholder="0"
               />
 
               <div className="grid grid-cols-2 gap-4">
+                {/* HOURS INPUT - FIXED */}
                 <InputGroup 
                   label="Hours" 
                   icon={Clock} 
-                  type="number" 
+                  type="text" // Use text to allow typing freely
+                  inputMode="decimal" // Shows decimal keyboard on mobile
                   value={form.hoursWorked} 
-                  onChange={(e) => setForm({ ...form, hoursWorked: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Regex: Allow empty, numbers, and one decimal point (e.g., 5.5)
+                    if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                      setForm({ ...form, hoursWorked: val });
+                    }
+                  }}
                   placeholder="0"
                 />
+                
                 <InputGroup 
                   label="Platform" 
                   icon={Briefcase} 
+                  type="text"
                   value={form.platform} 
                   onChange={(e) => setForm({ ...form, platform: e.target.value })}
                   placeholder="e.g. Swiggy"
@@ -358,6 +379,7 @@ export default function TodayLogCard({ user }) {
             <InputGroup 
               label="Notes" 
               icon={Tag} 
+              type="text"
               value={form.notes} 
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Any details..."
@@ -374,7 +396,7 @@ export default function TodayLogCard({ user }) {
         )}
       </div>
 
-      {/* Footer / Action Buttons */}
+      {/* --- FOOTER --- */}
       <div className="p-5 border-t border-gray-100 bg-gray-50 z-10">
         {!editing ? (
           <button

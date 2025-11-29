@@ -104,35 +104,29 @@ async def whatsapp_handle(request: Request):
 
 # -------------------------------------------------------------------
 # WEBHOOK ENDPOINT (TWILIO CALLS THIS)
-# -------------------------------------------------------------------
 @app.post("/webhook")
 def whatsapp_webhook(From: str = Form(...), Body: str = Form(...)):
     phone = From.replace("whatsapp:", "")
-    message = Body.strip().lower()
+    msg = Body.strip()
 
-    # ---------------------------------------------
-    # Step 1: Check if user email exists
-    # ---------------------------------------------
-    if phone not in user_email:
-        send_whatsapp(From, "Hi! Please share your email to continue 😊")
-        user_state[phone] = "waiting_email"
-        return Response("<Response></Response>", media_type="application/xml")
-
-    # ---------------------------------------------
-    # Step 2: If waiting for email, save it
-    # ---------------------------------------------
+    # -------- 1️⃣ FIRST: If waiting for email → SAVE IT --------
     if user_state.get(phone) == "waiting_email":
-        user_email[phone] = Body.strip()
+        user_email[phone] = msg
         user_state[phone] = None
-        send_whatsapp(From, f"Thank you! Email saved: {user_email[phone]}")
-        send_whatsapp(
-            From, "Now ask anything like:\n- my dreams\n- cashflow\n- mutual funds"
-        )
+
+        send_whatsapp(From, f"Thanks! Your email ({msg}) is saved 🎉")
+        send_whatsapp(From, "Now you can ask:\n- dreams\n- cashflow\n- advice")
         return Response("<Response></Response>", media_type="application/xml")
 
-    # ---------------------------------------------
-    # Process commands
-    # ---------------------------------------------
+    # -------- 2️⃣ SECOND: If no email → ASK FOR EMAIL --------
+    if phone not in user_email:
+        user_state[phone] = "waiting_email"
+        send_whatsapp(From, "Hi! Please share your email to continue ✨")
+        return Response("<Response></Response>", media_type="application/xml")
+
+    # -------- 3️⃣ THIRD: Process other commands --------
+    message = msg.lower()
+
     if "dream" in message:
         r = requests.get(f"{FASTAPI_BASE_URL}/dreams/{phone}")
         send_whatsapp(From, f"Your dreams:\n{r.json()}")
@@ -149,6 +143,6 @@ def whatsapp_webhook(From: str = Form(...), Body: str = Form(...)):
         send_whatsapp(From, f"Advice:\n{r.json()['advice']}")
         return Response("<Response></Response>", media_type="application/xml")
 
-    # Default
-    send_whatsapp(From, "Sorry, I didn’t understand. Try: dreams / cashflow / advice")
+    # Default fallback
+    send_whatsapp(From, "Sorry, try: dreams / cashflow / advice")
     return Response("<Response></Response>", media_type="application/xml")
