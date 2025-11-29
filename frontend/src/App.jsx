@@ -5,6 +5,7 @@ import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import "./App.css";
 
+import Landing from "./Pages/Landing";
 import Auth from "./Pages/Auth";
 import Dashboard from "./Pages/Dashboard";
 import Onboarding from "./Pages/Onboarding";
@@ -40,13 +41,26 @@ export default function App() {
   if (user === undefined || onboarded === null) {
     return (
       <div className="flex items-center justify-center h-screen text-lg font-semibold">
-        Loading...
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Not logged in → Show login page
-  if (!user) return <Auth />;
+  // Not logged in → Show landing page with routes to auth
+  if (!user) {
+    return (
+      <Router>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    );
+  }
 
   // Logged in but not onboarded → Show onboarding
   if (!onboarded) return <Onboarding />;
