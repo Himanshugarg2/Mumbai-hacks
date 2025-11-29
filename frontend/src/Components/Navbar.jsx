@@ -27,7 +27,7 @@ export default function Navbar() {
         className="text-xl font-bold text-gray-900 cursor-pointer"
         onClick={() => navigate("/")}
       >
-        FinCoach
+        Kuber
       </h1>
 
       {/* Center Links */}
