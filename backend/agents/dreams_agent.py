@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 from services.firestore_service import get_full_summary, get_dreams
-from services.gemini_service import call_gemini
+from services.gemini_service import call_gemini_json  # ✅ UPDATED IMPORT
 from firebase_admin import firestore
 
 db = firestore.client()
@@ -11,21 +11,12 @@ class DreamPlannerService:
     def __init__(self, user_id):
         self.user_id = user_id
 
-    # ------------------------------
-    # Months between dates
-    # ------------------------------
     def months_between(self, start, end):
         return max(1, (end.year - start.year) * 12 + (end.month - start.month))
 
-    # ------------------------------
-    # MAIN FUNCTION (always computes fresh result)
-    # ------------------------------
     def predict(self):
         return self._compute_plan()
 
-    # ------------------------------
-    # INTERNAL: Compute fresh AI plan
-    # ------------------------------
     def _compute_plan(self):
         summary = get_full_summary(self.user_id)
         dreams = get_dreams(self.user_id)
@@ -69,9 +60,7 @@ class DreamPlannerService:
                 }
             )
 
-        # ------------------------------
-        # GEMINI PROMPT
-        # ------------------------------
+        # ---------- PROMPT ----------
         prompt = f"""
 You are a financial planning assistant for gig workers in India.
 
@@ -82,27 +71,41 @@ User dreams:
 {json.dumps(plans, indent=2)}
 
 TASK:
-Return a VALID JSON object where each key is a dream title.
+Your entire response MUST be ONLY a JSON object.
 
-Each dream must have:
+STRICT RULES:
+- NO explanation
+- NO markdown
+- NO code blocks
+- NO comments
+- NO text outside JSON
+- MUST be valid JSON
+
+STRUCTURE (strict):
+
 {{
-  "monthly_plan": "string",
-  "daily_plan": "string",
-  "adjustments": "string",
-  "motivation": "string"
+  "Dream Title": {{
+    "monthly_plan": "string",
+    "daily_plan": "string",
+    "adjustments": "string",
+    "motivation": "string"
+  }}
 }}
-
-Return ONLY JSON — no text outside JSON.
 """
 
-        raw_response = call_gemini(prompt)
+        # 🔥 USE NEW JSON-SAFE GEMINI CALLER
+        raw_response = call_gemini_json(prompt)
 
-        # Safe parsing
+        cleaned = raw_response.strip()
+        cleaned = cleaned.replace("```json", "").replace("```", "")
+        cleaned = cleaned.replace(",}", "}").replace(",]", "]")
+
         try:
-            ai_plan_json = json.loads(raw_response)
+            ai_plan_json = json.loads(cleaned)
             if not isinstance(ai_plan_json, dict):
                 ai_plan_json = {}
         except Exception:
+            print("❌ JSON Error. Raw:", raw_response)
             ai_plan_json = {}
 
         return {

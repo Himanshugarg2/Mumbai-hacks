@@ -2,15 +2,12 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { 
   Rocket, 
-  Target, 
-  Calendar, 
   Trash2, 
   Plus, 
   Sparkles, 
   X, 
-  TrendingUp,
   BrainCircuit,
-  CheckCircle2
+  Calendar
 } from "lucide-react";
 
 // Utility to format currency
@@ -53,7 +50,8 @@ export default function DreamsCard({ user }) {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([loadDreams(), loadAIPlan()]).finally(() => setLoading(false));
+    // Load dreams first, then plan
+    loadDreams().then(() => loadAIPlan()).finally(() => setLoading(false));
   }, [user]);
 
   const loadDreams = async () => {
@@ -68,10 +66,45 @@ export default function DreamsCard({ user }) {
   const loadAIPlan = async () => {
     try {
       const res = await axios.get(`${API}/dreams/plan/${user.uid}`);
+      console.log("🔹 Raw AI Response:", res.data); // DEBUGGING: Check console to see what API returns
       setAiPlan(res.data || null);
     } catch (err) {
       console.log("AI Plan load failed", err);
     }
+  };
+
+  // --- HELPER TO PARSE AI DATA ---
+  const getPlanForDream = (dreamTitle, rawAiData) => {
+    if (!rawAiData) return null;
+
+    let parsedData = rawAiData;
+
+    // 1. Try to extract the inner object if wrapped in { aiPlan: ... }
+    if (rawAiData.aiPlan) {
+        parsedData = rawAiData.aiPlan;
+    }
+
+    // 2. If it's a string, try to parse it
+    if (typeof parsedData === "string") {
+        try {
+            // Remove Markdown code blocks like ```json ... ```
+            const cleanJson = parsedData.replace(/```json|```/g, "").trim();
+            parsedData = JSON.parse(cleanJson);
+        } catch (e) {
+            console.error("JSON Parse Error:", e);
+            return null;
+        }
+    }
+
+    // 3. Case-Insensitive Lookup
+    // If the keys in JSON are "Europe Trip" but dreamTitle is "europe trip", this finds it.
+    if (parsedData && typeof parsedData === 'object') {
+        const keys = Object.keys(parsedData);
+        const matchKey = keys.find(key => key.toLowerCase() === dreamTitle.toLowerCase());
+        return matchKey ? parsedData[matchKey] : null;
+    }
+
+    return null;
   };
 
   const saveDream = async () => {
@@ -92,7 +125,7 @@ export default function DreamsCard({ user }) {
     setLoading(true);
     
     await loadDreams();
-    // Clear AI cache and reload
+    // Clear AI cache and reload to generate new plan for new dream
     await axios.delete(`${API}/dreams/plan/${user.uid}/cache`).catch(() => {});
     await loadAIPlan();
     setLoading(false);
@@ -149,13 +182,8 @@ export default function DreamsCard({ user }) {
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {dreams.map((d) => {
-              // Parse AI Plan safely
-              let planObj = aiPlan?.aiPlan;
-              if (typeof planObj === "string") {
-                planObj = planObj.replace(/```json|```/g, "").trim();
-                try { planObj = JSON.parse(planObj); } catch { planObj = null; }
-              }
-              const dreamPlan = planObj?.[d.title];
+              // USE THE NEW HELPER FUNCTION HERE
+              const dreamPlan = getPlanForDream(d.title, aiPlan);
 
               return (
                 <div key={d.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
@@ -189,8 +217,8 @@ export default function DreamsCard({ user }) {
                   </div>
 
                   {/* AI Strategy Footer */}
-                  {dreamPlan && (
-                    <div className="bg-slate-50 border-t border-slate-100 p-5">
+                  {dreamPlan ? (
+                    <div className="bg-slate-50 border-t border-slate-100 p-5 animate-in fade-in duration-500">
                       <div className="flex items-center gap-2 mb-3">
                         <BrainCircuit className="w-4 h-4 text-violet-600" />
                         <span className="text-xs font-bold text-violet-900 uppercase tracking-wide">AI Blueprint</span>
@@ -212,6 +240,14 @@ export default function DreamsCard({ user }) {
                         <p className="text-xs text-yellow-800 italic">"{dreamPlan.motivation}"</p>
                       </div>
                     </div>
+                  ) : (
+                     /* Optional: Loading state specific to the plan */
+                     <div className="bg-slate-50 border-t border-slate-100 p-3 text-center">
+                        <p className="text-xs text-gray-400 flex items-center justify-center gap-2">
+                           <BrainCircuit className="w-3 h-3" />
+                           Generating plan... 
+                        </p>
+                     </div>
                   )}
                 </div>
               );

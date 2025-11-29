@@ -51,3 +51,31 @@ TASK:
 """
 
     return call_gemini(prompt)
+
+
+# -------------------------------------
+# 🔵 Custom Gemini JSON Caller (safe)
+# -------------------------------------
+def call_gemini_json(prompt: str) -> str:
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        response = model.generate_content(prompt)
+
+        # Correct extraction for Gemini 2.5 JSON output
+        if (
+            hasattr(response, "candidates")
+            and response.candidates
+            and hasattr(response.candidates[0], "content")
+        ):
+            parts = response.candidates[0].content.parts
+            if parts:
+                text = "".join(
+                    getattr(part, "text", "") for part in parts if hasattr(part, "text")
+                )
+                return text.strip()
+
+        return ""  # return empty to trigger fallback in DreamPlanner
+
+    except Exception as e:
+        print("Gemini JSON Error:", e)
+        return ""
