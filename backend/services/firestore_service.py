@@ -1,3 +1,6 @@
+# Fetch all onboarding fields for a user
+
+
 # services/firestore_service.py
 # This file handles all Firestore interactions
 
@@ -217,3 +220,53 @@ def get_full_summary(user_id: str) -> dict:
         "projectedMonthlySpend": round(projected_monthly, 2),
         "expectedOvershoot": round(overshoot, 2),
     }
+
+
+def get_onboarding_fields(user_id: str) -> dict:
+    user_ref = db.collection("users").document(user_id)
+    user_doc = user_ref.get().to_dict() or {}
+    # All fields from onboarding (basic + advanced)
+    fields = {
+        "gigType": user_doc.get("gigType", ""),
+        "monthlyIncome": user_doc.get("monthlyIncome", 0),
+        "monthlyExpense": user_doc.get("monthlyExpense", 0),
+        "age": user_doc.get("age", ""),
+        "sex": user_doc.get("sex", ""),
+        "incomeAfterTax": user_doc.get("incomeAfterTax", ""),
+        "marriageStatus": user_doc.get("marriageStatus", ""),
+        "numOfKids": user_doc.get("numOfKids", ""),
+        "ageOfParents": user_doc.get("ageOfParents", ""),
+        "riskAppetite": user_doc.get("riskAppetite", ""),
+        "healthConditions": user_doc.get("healthConditions", ""),
+        "investmentAmount": user_doc.get("investmentAmount", ""),
+        "onboardingCompleted": user_doc.get("onboardingCompleted", False),
+        "updatedAt": user_doc.get("updatedAt", None),
+    }
+    return fields
+
+
+def save_chat_message(user_id: str, role: str, message: str):
+    return (
+        db.collection("users")
+        .document(user_id)
+        .collection("chats")
+        .add(
+            {
+                "role": role,
+                "message": message,
+                "timestamp": datetime.utcnow(),
+            }
+        )
+    )
+
+
+def get_chat_history(user_id: str):
+    docs = (
+        db.collection("users")
+        .document(user_id)
+        .collection("chats")
+        .order_by("timestamp")
+        .stream()
+    )
+
+    return [d.to_dict() for d in docs]

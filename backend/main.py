@@ -1,6 +1,15 @@
-from fastapi import FastAPI, Query
+from agents.Finance_agent import FinancialPortfolioAgent
+
+# ----------------------------------------------------------------------------
+# Financial Portfolio Agent Endpoint
+# ----------------------------------------------------------------------------
+
+
+from fastapi import FastAPI, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from firebase_admin import firestore
+from agents.ai_chat import chatbot
+from services.firestore_service import save_chat_message
 
 # Firestore CRUD
 from services.firestore_service import (
@@ -10,6 +19,8 @@ from services.firestore_service import (
     delete_dream,
     get_summary,
 )
+
+from services.firestore_service import save_chat_message
 
 from services.gemini_service import generate_advice
 
@@ -67,11 +78,6 @@ def health():
 def create_dream(payload: dict):
     add_dream(payload["userId"], payload)
 
-    # CLEAR CACHE
-    db.collection("users").document(payload["userId"]).collection("dream_ai").document(
-        "plan"
-    ).delete()
-
     return {"message": "dream added"}
 
 
@@ -84,22 +90,12 @@ def list_dreams(userId: str):
 def modify_dream(userId: str, dreamId: str, payload: dict):
     update_dream(userId, dreamId, payload)
 
-    # CLEAR CACHE
-    db.collection("users").document(userId).collection("dream_ai").document(
-        "plan"
-    ).delete()
-
     return {"message": "dream updated"}
 
 
 @app.delete("/dreams/{userId}/{dreamId}")
 def remove_dream(userId: str, dreamId: str):
     delete_dream(userId, dreamId)
-
-    # CLEAR CACHE
-    db.collection("users").document(userId).collection("dream_ai").document(
-        "plan"
-    ).delete()
 
     return {"message": "dream deleted"}
 
@@ -229,3 +225,17 @@ def smart_guardian(userId: str):
 def dream_plan(userId: str):
     service = DreamPlannerService(userId)
     return service.predict()
+
+
+@app.get("/ai/portfolio/{userId}")
+def portfolio_allocation(userId: str):
+    agent = FinancialPortfolioAgent(userId)
+    return agent.generate_portfolio()
+
+
+@app.post("/ai/chat/{userId}")
+def finance_chat(userId: str, payload: dict):
+    user_message = payload.get("message", "")
+
+    agent = chatbot(userId)
+    return agent.chat(user_message)

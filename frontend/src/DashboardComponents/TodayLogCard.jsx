@@ -90,12 +90,23 @@ export default function TodayLogCard({ user }) {
   // --------------------------
   const saveLog = async () => {
     setLoading(true);
+    // Convert all inputs to numbers before saving
+    const cleaned = {
+      ...form,
+      income: Number(form.income) || 0,
+      hoursWorked: Number(form.hoursWorked) || 0,
+      expenses: {
+        fuel: Number(form.expenses.fuel) || 0,
+        food: Number(form.expenses.food) || 0,
+        misc: Number(form.expenses.misc) || 0,
+      }
+    };
     await setDoc(
       doc(db, "users", user.uid, "transactions", dateKey),
-      form,
+      cleaned,
       { merge: true }
     );
-    setLog(form);
+    setLog(cleaned);
     setEditing(false);
     setLoading(false);
   };
@@ -120,7 +131,7 @@ export default function TodayLogCard({ user }) {
         </div>
         <input
           type={type}
-          value={value}
+          value={value === undefined || value === null ? "" : String(value)}
           onChange={onChange}
           placeholder={placeholder}
           className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-medium text-gray-800"
@@ -273,11 +284,17 @@ export default function TodayLogCard({ user }) {
                 label="Total Income" 
                 icon={Banknote} 
                 type="number" 
-                value={form.income} 
-                onChange={(e) => setForm({ ...form, income: e.target.value })} 
+                value={form.income === null || form.income === undefined ? "" : form.income}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({
+                    ...form,
+                    income: val === "" ? "" : (/^\d+$/.test(val) ? Number(val) : form.income)
+                  });
+                }}
                 placeholder="0"
               />
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <InputGroup 
                   label="Hours" 

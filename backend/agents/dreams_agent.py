@@ -10,12 +10,6 @@ db = firestore.client()
 class DreamPlannerService:
     def __init__(self, user_id):
         self.user_id = user_id
-        self.cache_ref = (
-            db.collection("users")
-            .document(user_id)
-            .collection("dream_ai")
-            .document("plan")
-        )
 
     # ------------------------------
     # Months between dates
@@ -24,24 +18,10 @@ class DreamPlannerService:
         return max(1, (end.year - start.year) * 12 + (end.month - start.month))
 
     # ------------------------------
-    # MAIN FUNCTION (checks cache first)
+    # MAIN FUNCTION (always computes fresh result)
     # ------------------------------
     def predict(self):
-        cache_doc = self.cache_ref.get()
-
-        # Only return cache if exists AND aiPlan exists
-        if cache_doc.exists:
-            cached = cache_doc.to_dict()
-            if cached and "aiPlan" in cached:
-                return cached
-
-        # Compute fresh result
-        result = self._compute_plan()
-
-        # Save result to Firestore (cache)
-        self.cache_ref.set(result)
-
-        return result
+        return self._compute_plan()
 
     # ------------------------------
     # INTERNAL: Compute fresh AI plan

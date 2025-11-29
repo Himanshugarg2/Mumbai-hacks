@@ -65,6 +65,18 @@ export default function Onboarding() {
   const [expense, setExpense] = useState("");
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState(null);
+  // Advanced fields for page 3
+  const [advancedFields, setAdvancedFields] = useState({
+    age: '',
+    sex: '',
+    incomeAfterTax: '',
+    marriageStatus: '',
+    numOfKids: '',
+    ageOfParents: '',
+    riskAppetite: '',
+    healthConditions: '',
+    investmentAmount: ''
+  });
 
   useEffect(() => {
     // Wait for auth to initialize
@@ -79,7 +91,6 @@ export default function Onboarding() {
       alert("Please log in to continue.");
       return;
     }
-
     setSaving(true);
     try {
       await setDoc(
@@ -90,10 +101,10 @@ export default function Onboarding() {
           monthlyExpense: Number(expense),
           onboardingCompleted: true,
           updatedAt: Date.now(),
+          ...advancedFields,
         },
         { merge: true }
       );
-      // Smooth redirect
       window.location.href = "/";
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -189,25 +200,121 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* STEP 3: EXPENSE INPUT */}
+          {/* STEP 3: EXPENSE INPUT + ADVANCED FIELDS */}
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-               <div className="bg-red-50/50 p-6 rounded-2xl border border-red-100 flex flex-col items-center justify-center mb-6">
-                 <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
-                    <TrendingDown size={32} />
-                 </div>
-                 <div className="relative w-full max-w-xs">
-                    <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <div className="bg-red-50/50 p-6 rounded-2xl border border-red-100 flex flex-col items-center justify-center mb-6">
+                <div className="h-16 w-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                  <TrendingDown size={32} />
+                </div>
+                <div className="relative w-full max-w-xs mb-4">
+                  <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="number"
+                    value={expense}
+                    onChange={(e) => setExpense(e.target.value)}
+                    placeholder="0"
+                    className="w-full pl-10 pr-4 py-3 text-3xl font-bold text-center text-gray-900 bg-white border-2 border-red-100 rounded-xl focus:border-red-500 focus:ring-0 outline-none placeholder:text-gray-300 transition-all"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mb-6">Includes rent, food, transport, EMIs</p>
+                {/* Advanced Fields */}
+                <form className="w-full" onSubmit={e => e.preventDefault()}>
+                  <div className="grid grid-cols-1 gap-3">
                     <input
                       type="number"
-                      value={expense}
-                      onChange={(e) => setExpense(e.target.value)}
-                      placeholder="0"
-                      className="w-full pl-10 pr-4 py-3 text-3xl font-bold text-center text-gray-900 bg-white border-2 border-red-100 rounded-xl focus:border-red-500 focus:ring-0 outline-none placeholder:text-gray-300 transition-all"
-                      autoFocus
+                      name="age"
+                      value={advancedFields.age}
+                      onChange={e => setAdvancedFields(f => ({ ...f, age: e.target.value }))}
+                      placeholder="Age"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
                     />
-                 </div>
-                 <p className="text-xs text-gray-500 mt-3">Includes rent, food, transport, EMIs</p>
+                    <select
+                      name="sex"
+                      value={advancedFields.sex}
+                      onChange={e => setAdvancedFields(f => ({ ...f, sex: e.target.value }))}
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    >
+                      <option value="">Select Sex</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input
+                      type="number"
+                      name="incomeAfterTax"
+                      value={advancedFields.incomeAfterTax}
+                      onChange={e => setAdvancedFields(f => ({ ...f, incomeAfterTax: e.target.value }))}
+                      placeholder="Income After Tax"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    />
+                    <select
+                      name="marriageStatus"
+                      value={advancedFields.marriageStatus}
+                      onChange={e => setAdvancedFields(f => ({ ...f, marriageStatus: e.target.value }))}
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    >
+                      <option value="">Select Marriage Status</option>
+                      <option value="Single">Single</option>
+                      <option value="Married">Married</option>
+                      <option value="Divorced">Divorced</option>
+                      <option value="Widowed">Widowed</option>
+                    </select>
+                    <input
+                      type="number"
+                      name="numOfKids"
+                      value={advancedFields.numOfKids}
+                      onChange={e => setAdvancedFields(f => ({ ...f, numOfKids: e.target.value }))}
+                      placeholder="Number of Kids"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    />
+                    <input
+                      type="number"
+                      name="ageOfParents"
+                      value={advancedFields.ageOfParents}
+                      onChange={e => setAdvancedFields(f => ({ ...f, ageOfParents: e.target.value }))}
+                      placeholder="Age of Parents"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    />
+                    <select
+                      name="riskAppetite"
+                      value={advancedFields.riskAppetite}
+                      onChange={e => setAdvancedFields(f => ({ ...f, riskAppetite: e.target.value }))}
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    >
+                      <option value="">Select Risk Appetite</option>
+                      <option value="Conservative">Conservative</option>
+                      <option value="Moderate">Moderate</option>
+                      <option value="Aggressive">Aggressive</option>
+                    </select>
+                    <input
+                      type="text"
+                      name="healthConditions"
+                      value={advancedFields.healthConditions}
+                      onChange={e => setAdvancedFields(f => ({ ...f, healthConditions: e.target.value }))}
+                      placeholder="Health Conditions"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    />
+                    <input
+                      type="number"
+                      name="investmentAmount"
+                      value={advancedFields.investmentAmount}
+                      onChange={e => setAdvancedFields(f => ({ ...f, investmentAmount: e.target.value }))}
+                      placeholder="Investment Amount"
+                      className="shadow border rounded w-full py-2 px-3"
+                      required
+                    />
+                  </div>
+                </form>
               </div>
             </div>
           )}
